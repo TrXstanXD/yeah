@@ -1,0 +1,556 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Class & Assignment Tracker</title>
+<style>
+  :root{
+    --bg:#0f1115; --card:#171a21; --muted:#242a33; --text:#eaeef7; --sub:#9aa5b1;
+    --accent:#4f8cff; --accent-2:#7c4dff; --green:#2ecc71; --red:#ff5c5c; --yellow:#ffd166;
+    --shadow:0 10px 30px rgba(0,0,0,.35);
+    --radius:14px;
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%}
+  body{
+    margin:0; font-family:system-ui,-apple-system,Segoe UI,Roboto,Inter,Arial,sans-serif;
+    background:linear-gradient(135deg,#0d0f14,#111520 35%,#0f1320 100%); color:var(--text);
+  }
+  header{
+    position:sticky; top:0; z-index:5; backdrop-filter:saturate(1.2) blur(8px);
+    background:linear-gradient(180deg, rgba(17,21,32,.95), rgba(17,21,32,.7));
+    border-bottom:1px solid #1f2630; padding:14px 18px;
+  }
+  header h1{margin:0; font-size:20px; letter-spacing:.3px}
+  .container{max-width:1200px; margin:24px auto; padding:0 16px}
+  .grid{
+    display:grid; gap:18px;
+    grid-template-columns: repeat(12,1fr);
+  }
+  .col-6{grid-column: span 6}
+  .col-4{grid-column: span 4}
+  .col-8{grid-column: span 8}
+  .col-12{grid-column: span 12}
+  @media (max-width: 900px){
+    .col-6,.col-4,.col-8{grid-column: span 12}
+  }
+  .card{
+    background:var(--card); border:1px solid #202734; border-radius:var(--radius);
+    box-shadow:var(--shadow); padding:16px;
+  }
+  h2{margin:4px 0 14px 0; font-size:18px}
+  label{display:block; font-size:12px; color:var(--sub); margin:8px 0 6px}
+  input,select,textarea{
+    width:100%; background:#0f1320; color:var(--text);
+    border:1px solid #2a3240; border-radius:10px; padding:10px 12px; outline:none;
+  }
+  textarea{min-height:80px}
+  .row{display:grid; grid-template-columns:1fr 1fr; gap:12px}
+  .days{display:flex; flex-wrap:wrap; gap:8px}
+  .day-chip{display:flex; align-items:center; gap:6px; background:#0f1320; border:1px solid #2a3240; border-radius:999px; padding:6px 10px}
+  .btn{
+    display:inline-flex; align-items:center; justify-content:center; gap:8px;
+    padding:10px 14px; border-radius:12px; border:1px solid #2a3240; background:#111726;
+    color:var(--text); cursor:pointer; user-select:none; text-decoration:none;
+  }
+  .btn:hover{filter:brightness(1.08)}
+  .btn-primary{background:linear-gradient(180deg,#346cff,#2454ff); border-color:#2247c9}
+  .btn-danger{background:linear-gradient(180deg,#ff6464,#ff3c3c); border-color:#b42828}
+  .btn-ghost{background:#0f1320}
+  .badges{display:flex; gap:8px; flex-wrap:wrap}
+  .badge{font-size:12px; padding:4px 8px; background:#0f1320; border:1px solid #2a3240; border-radius:999px; color:var(--sub)}
+  .class-item{display:flex; gap:12px; align-items:flex-start; padding:10px; border:1px solid #202734; border-radius:12px; background:#121824}
+  .color-dot{width:12px; height:12px; border-radius:50%; box-shadow:0 0 0 2px #000 inset}
+  .list{display:flex; flex-direction:column; gap:10px}
+  .assignment{display:grid; grid-template-columns:1fr auto; gap:10px; align-items:center;
+    padding:10px; border:1px solid #202734; border-radius:12px; background:#121824}
+  .muted{color:var(--sub)}
+  .status-pill{padding:4px 8px; border-radius:999px; font-size:12px; border:1px solid #2a3240}
+  .pill-todo{background:#131a28}
+  .pill-doing{background:#1a1f2d; border-color:#3b3f55; color:#cdd7ff}
+  .pill-done{background:#132019; border-color:#254c33; color:#c4f3d1}
+  .flex{display:flex; gap:8px; align-items:center}
+  .space-between{display:flex; align-items:center; justify-content:space-between; gap:10px}
+  .schedule-grid{
+    display:grid; gap:12px; grid-template-columns: repeat(7, 1fr);
+  }
+  .day-col{background:#121824; border:1px solid #202734; border-radius:12px; padding:10px}
+  .day-col h3{margin:2px 0 8px 0; font-size:14px; color:var(--sub)}
+  .day-class{display:flex; align-items:center; gap:8px; padding:8px; border:1px solid #2a3240; border-radius:10px; background:#0f1320}
+  .footer{display:flex; gap:10px; flex-wrap:wrap; padding:10px 0}
+  .small{font-size:12px}
+</style>
+</head>
+<body>
+<header>
+  <div class="space-between">
+    <h1>Class & Assignment Tracker</h1>
+    <div class="footer">
+      <button class="btn btn-ghost" id="exportBtn">Export JSON</button>
+      <label class="btn btn-ghost" style="position:relative; overflow:hidden;">
+        Import JSON
+        <input id="importInput" type="file" accept="application/json" style="position:absolute; inset:0; opacity:0; cursor:pointer">
+      </label>
+    </div>
+  </div>
+</header>
+
+<main class="container">
+  <div class="grid">
+    <!-- CLASSES -->
+    <section class="col-6">
+      <div class="card">
+        <h2>New Class</h2>
+        <form id="classForm">
+          <label>Class name</label>
+          <input required id="c-name" placeholder="e.g., Biology 101">
+          <div class="row">
+            <div>
+              <label>Teacher</label>
+              <input id="c-teacher" placeholder="Dr. Smith">
+            </div>
+            <div>
+              <label>Location</label>
+              <input id="c-location" placeholder="Room 201">
+            </div>
+          </div>
+
+          <label>Days</label>
+          <div class="days" id="c-days"></div>
+
+          <div class="row">
+            <div>
+              <label>Start time</label>
+              <input id="c-start" type="time" value="09:00">
+            </div>
+            <div>
+              <label>End time</label>
+              <input id="c-end" type="time" value="10:00">
+            </div>
+          </div>
+
+          <div class="row">
+            <div>
+              <label>Color</label>
+              <input id="c-color" type="color" value="#3b82f6" />
+            </div>
+            <div style="align-self:end">
+              <button class="btn btn-primary" type="submit">Add Class</button>
+            </div>
+          </div>
+        </form>
+      </div>
+
+      <div class="card" style="margin-top:16px">
+        <div class="space-between">
+          <h2>Your Classes</h2>
+          <span class="small muted" id="classCount"></span>
+        </div>
+        <div class="list" id="classList"></div>
+      </div>
+    </section>
+
+    <!-- ASSIGNMENTS -->
+    <section class="col-6">
+      <div class="card">
+        <h2>New Assignment</h2>
+        <form id="assignForm">
+          <label>Class</label>
+          <select id="a-class" required></select>
+          <label>Title</label>
+          <input id="a-title" required placeholder="e.g., Lab Report 2">
+          <div class="row">
+            <div>
+              <label>Due date</label>
+              <input id="a-due" type="date" required>
+            </div>
+            <div>
+              <label>Priority</label>
+              <select id="a-priority">
+                <option>Low</option><option selected>Medium</option><option>High</option>
+              </select>
+            </div>
+          </div>
+          <label>Notes</label>
+          <textarea id="a-notes" placeholder="Details, rubric link…"></textarea>
+          <div class="space-between">
+            <button class="btn btn-primary" type="submit">Add Assignment</button>
+            <div class="flex">
+              <label class="small muted">Filter</label>
+              <select id="filterStatus">
+                <option value="all">All</option>
+                <option value="Todo">Todo</option>
+                <option value="InProgress">In Progress</option>
+                <option value="Done">Done</option>
+              </select>
+              <select id="filterClass"><option value="all">All Classes</option></select>
+            </div>
+          </div>
+        </form>
+      </div>
+
+      <div class="card" style="margin-top:16px">
+        <div class="space-between">
+          <h2>Assignments</h2>
+          <span class="small muted" id="assignmentCount"></span>
+        </div>
+        <div class="list" id="assignmentList"></div>
+      </div>
+    </section>
+
+    <!-- QUICK TODO -->
+    <section class="col-4">
+      <div class="card">
+        <h2>Quick To-Do</h2>
+        <form id="todoForm" class="space-between">
+          <input id="t-text" placeholder="New task…" />
+          <button class="btn btn-primary" type="submit">Add</button>
+        </form>
+        <div class="list" id="todoList" style="margin-top:12px"></div>
+      </div>
+    </section>
+
+    <!-- SCHEDULE -->
+    <section class="col-8">
+      <div class="card">
+        <div class="space-between">
+          <h2>Weekly Schedule</h2>
+          <span class="small muted">Auto-built from your classes</span>
+        </div>
+        <div class="schedule-grid" id="scheduleGrid"></div>
+      </div>
+    </section>
+  </div>
+</main>
+
+<script>
+(function(){
+  // ---------- Utilities ----------
+  const $ = sel => document.querySelector(sel);
+  const $$ = sel => Array.from(document.querySelectorAll(sel));
+  const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2,7);
+  const DAY_ORDER = ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"];
+
+  function save(){
+    localStorage.setItem('ct-data-v1', JSON.stringify(state));
+  }
+  function load(){
+    try{
+      const raw = localStorage.getItem('ct-data-v1');
+      if(raw){ Object.assign(state, JSON.parse(raw)); }
+    }catch(e){ console.warn('load failed', e); }
+  }
+  function daysUntil(d){
+    try{
+      const now = new Date(); now.setHours(0,0,0,0);
+      const due = new Date(d); due.setHours(0,0,0,0);
+      return Math.round((due - now) / (1000*60*60*24));
+    }catch{ return null; }
+  }
+  function sortAssignments(a,b){
+    const ad = new Date(a.due || '2100-01-01');
+    const bd = new Date(b.due || '2100-01-01');
+    return ad - bd;
+  }
+  function timeLabel(t){ return t || ""; }
+
+  // ---------- State ----------
+  const state = { classes:[], assignments:[], todos:[] };
+
+  // ---------- Init day chips ----------
+  const daysWrap = $('#c-days');
+  DAY_ORDER.forEach(d=>{
+    const id = 'day-'+d;
+    const chip = document.createElement('label');
+    chip.className='day-chip';
+    chip.innerHTML = `<input type="checkbox" id="${id}" value="${d}"><span>${d}</span>`;
+    daysWrap.appendChild(chip);
+  });
+
+  // ---------- Forms & Lists ----------
+  const classForm = $('#classForm');
+  const classList = $('#classList');
+  const classCount = $('#classCount');
+
+  const assignForm = $('#assignForm');
+  const assignmentList = $('#assignmentList');
+  const assignmentCount = $('#assignmentCount');
+  const filterStatus = $('#filterStatus');
+  const filterClass = $('#filterClass');
+
+  const todoForm = $('#todoForm');
+  const todoList = $('#todoList');
+
+  const scheduleGrid = $('#scheduleGrid');
+
+  // ---------- Renderers ----------
+  function renderClasses(){
+    classList.innerHTML = '';
+    classCount.textContent = `${state.classes.length} total`;
+    // options in pickers
+    const sel = $('#a-class'), fc = $('#filterClass');
+    sel.innerHTML = ''; fc.innerHTML = '<option value="all">All Classes</option>';
+    state.classes
+      .slice()
+      .sort((a,b)=>a.name.localeCompare(b.name))
+      .forEach(c=>{
+        // list item
+        const item = document.createElement('div');
+        item.className='class-item';
+        item.innerHTML = `
+          <div class="color-dot" style="background:${c.color}"></div>
+          <div style="flex:1">
+            <div class="space-between">
+              <div><strong>${escapeHtml(c.name)}</strong></div>
+              <div class="badges">
+                <span class="badge">${escapeHtml(c.teacher || '')}</span>
+                <span class="badge">${escapeHtml(c.location || '')}</span>
+              </div>
+            </div>
+            <div class="muted small" style="margin-top:6px">
+              ${c.days.join(', ')} • ${timeLabel(c.start)}–${timeLabel(c.end)}
+            </div>
+          </div>
+          <button class="btn btn-danger small" data-del="${c.id}">Delete</button>
+        `;
+        classList.appendChild(item);
+        item.querySelector('[data-del]').addEventListener('click', ()=>{
+          if(!confirm('Delete class? Assignments will remain but be unassigned.')) return;
+          // remove class, unassign assignments
+          state.classes = state.classes.filter(x=>x.id!==c.id);
+          state.assignments.forEach(a=>{ if(a.classId===c.id) a.classId=null; });
+          save(); renderAll();
+        });
+
+        // add option
+        const opt = document.createElement('option');
+        opt.value = c.id; opt.textContent = c.name;
+        sel.appendChild(opt);
+
+        const opt2 = document.createElement('option');
+        opt2.value = c.id; opt2.textContent = c.name;
+        filterClass.appendChild(opt2);
+      });
+
+    // if no classes, keep filters sane
+    if(!sel.value && sel.options.length>0) sel.selectedIndex = 0;
+  }
+
+  function renderAssignments(){
+    assignmentList.innerHTML = '';
+
+    const fs = filterStatus.value;
+    const fc = filterClass.value;
+
+    let list = state.assignments.slice().sort(sortAssignments);
+    if(fs!=='all') list = list.filter(a=>a.status===fs);
+    if(fc!=='all') list = list.filter(a=>a.classId===fc);
+
+    assignmentCount.textContent = `${list.length} shown`;
+
+    list.forEach(a=>{
+      const klass = state.classes.find(c=>c.id===a.classId);
+      const dleft = daysUntil(a.due);
+      const dueLbl = a.due ? new Date(a.due).toLocaleDateString() : '—';
+      const pillCls = a.status==='Done' ? 'pill-done' : (a.status==='InProgress' ? 'pill-doing' : 'pill-todo');
+      const card = document.createElement('div');
+      card.className='assignment';
+      card.innerHTML = `
+        <div>
+          <div class="space-between">
+            <div><strong>${escapeHtml(a.title)}</strong></div>
+            <span class="status-pill ${pillCls}">${a.status}</span>
+          </div>
+          <div class="muted small" style="margin-top:6px">
+            ${klass ? `<span style="display:inline-flex;align-items:center;gap:6px">
+              <span class="color-dot" style="background:${klass.color}"></span>${escapeHtml(klass.name)}
+            </span>` : `<em class="muted">Unassigned</em>`}
+            • Due: ${dueLbl}
+            ${dleft!=null ? `• <span ${dleft<0?'style="color:var(--red)"':''}>${dleft<0?`${Math.abs(dleft)}d late`:`${dleft}d left`}</span>`:''}
+            • Priority: ${a.priority}
+          </div>
+          ${a.notes ? `<div class="small" style="margin-top:6px">${escapeHtml(a.notes)}</div>`:''}
+        </div>
+        <div class="flex">
+          ${a.status!=='Done'?`<button class="btn small" data-start="${a.id}">Start</button>`:''}
+          ${a.status!=='Done'?`<button class="btn small" data-done="${a.id}">Done</button>`:''}
+          <button class="btn btn-ghost small" data-del="${a.id}">Delete</button>
+        </div>
+      `;
+      assignmentList.appendChild(card);
+
+      const del = card.querySelector('[data-del]');
+      del.addEventListener('click', ()=>{
+        if(!confirm('Delete assignment?')) return;
+        state.assignments = state.assignments.filter(x=>x.id!==a.id);
+        save(); renderAssignments();
+      });
+      const start = card.querySelector('[data-start]');
+      if(start) start.addEventListener('click', ()=>{
+        a.status='InProgress'; save(); renderAssignments();
+      });
+      const done = card.querySelector('[data-done]');
+      if(done) done.addEventListener('click', ()=>{
+        a.status='Done'; save(); renderAssignments();
+      });
+    });
+  }
+
+  function renderTodos(){
+    todoList.innerHTML='';
+    state.todos.forEach(t=>{
+      const row = document.createElement('div');
+      row.className='space-between';
+      row.innerHTML = `
+        <label class="flex" style="gap:10px">
+          <input type="checkbox" ${t.done?'checked':''} data-chk="${t.id}">
+          <span ${t.done?'style="text-decoration:line-through; opacity:.7"':''}>${escapeHtml(t.text)}</span>
+        </label>
+        <button class="btn btn-ghost small" data-del="${t.id}">Delete</button>
+      `;
+      todoList.appendChild(row);
+      row.querySelector('[data-chk]').addEventListener('change', (e)=>{
+        t.done = e.target.checked; save(); renderTodos();
+      });
+      row.querySelector('[data-del]').addEventListener('click', ()=>{
+        state.todos = state.todos.filter(x=>x.id!==t.id); save(); renderTodos();
+      });
+    });
+  }
+
+  function renderSchedule(){
+    scheduleGrid.innerHTML='';
+    DAY_ORDER.forEach(day=>{
+      const col = document.createElement('div');
+      col.className='day-col';
+      col.innerHTML = `<h3>${day}</h3><div class="list"></div>`;
+      const list = col.querySelector('.list');
+
+      state.classes
+        .filter(c=>c.days.includes(day))
+        .sort((a,b)=> (a.start||'').localeCompare(b.start||''))
+        .forEach(c=>{
+          const item = document.createElement('div');
+          item.className='day-class';
+          item.innerHTML = `
+            <span class="color-dot" style="background:${c.color}"></span>
+            <div>
+              <div><strong>${escapeHtml(c.name)}</strong></div>
+              <div class="small muted">${timeLabel(c.start)}–${timeLabel(c.end)} • ${escapeHtml(c.location||'')} ${c.teacher?`• ${escapeHtml(c.teacher)}`:''}</div>
+            </div>
+          `;
+          list.appendChild(item);
+        });
+      scheduleGrid.appendChild(col);
+    });
+  }
+
+  function renderAll(){
+    renderClasses();
+    renderAssignments();
+    renderTodos();
+    renderSchedule();
+  }
+
+  // ---------- Event: Add Class ----------
+  classForm.addEventListener('submit', (e)=>{
+    e.preventDefault();
+    const name = $('#c-name').value.trim();
+    if(!name) return;
+    const c = {
+      id: uid(),
+      name,
+      teacher: $('#c-teacher').value.trim(),
+      location: $('#c-location').value.trim(),
+      days: $$('#c-days input[type=checkbox]:checked').map(i=>i.value),
+      start: $('#c-start').value,
+      end: $('#c-end').value,
+      color: $('#c-color').value || '#3b82f6'
+    };
+    state.classes.push(c);
+    // reset minimal
+    $('#c-name').value=''; $('#c-teacher').value=''; $('#c-location').value='';
+    $$('#c-days input').forEach(i=>i.checked=false);
+    save(); renderAll();
+  });
+
+  // ---------- Event: Add Assignment ----------
+  assignForm.addEventListener('submit', (e)=>{
+    e.preventDefault();
+    const cls = $('#a-class').value || null;
+    const title = $('#a-title').value.trim();
+    const due = $('#a-due').value;
+    if(!title || !due) return;
+    const a = {
+      id: uid(),
+      classId: cls,
+      title, due,
+      priority: $('#a-priority').value,
+      status: 'Todo',
+      notes: $('#a-notes').value.trim()
+    };
+    state.assignments.push(a);
+    // reset
+    $('#a-title').value=''; $('#a-notes').value='';
+    save(); renderAssignments();
+  });
+
+  // ---------- Filters ----------
+  [filterStatus, filterClass].forEach(el => el.addEventListener('change', renderAssignments));
+
+  // ---------- To-Do ----------
+  todoForm.addEventListener('submit', (e)=>{
+    e.preventDefault();
+    const text = $('#t-text').value.trim();
+    if(!text) return;
+    state.todos.push({id:uid(), text, done:false});
+    $('#t-text').value='';
+    save(); renderTodos();
+  });
+
+  // ---------- Export / Import ----------
+  $('#exportBtn').addEventListener('click', ()=>{
+    const blob = new Blob([JSON.stringify(state,null,2)], {type:'application/json'});
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'class-tracker-backup.json';
+    a.click();
+    URL.revokeObjectURL(a.href);
+  });
+  $('#importInput').addEventListener('change', async (e)=>{
+    const file = e.target.files[0];
+    if(!file) return;
+    const text = await file.text();
+    try{
+      const data = JSON.parse(text);
+      if(!data || !Array.isArray(data.classes) || !Array.isArray(data.assignments) || !Array.isArray(data.todos)){
+        alert('Invalid backup file.');
+        return;
+      }
+      state.classes = data.classes;
+      state.assignments = data.assignments;
+      state.todos = data.todos;
+      save(); renderAll();
+      alert('Import complete ✅');
+    }catch(err){
+      alert('Import failed: ' + err.message);
+    }
+    e.target.value = '';
+  });
+
+  // ---------- Escape helper ----------
+  function escapeHtml(str){
+    return (str||'').replace(/[&<>"']/g, s => ({
+      '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
+    }[s]));
+  }
+
+  // ---------- Boot ----------
+  load();
+  // pre-fill days UI if nothing
+  renderAll();
+})();
+</script>
+</body>
+</html>
